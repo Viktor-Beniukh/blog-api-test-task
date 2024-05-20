@@ -1,6 +1,14 @@
+import logging
+
 import uvicorn
 
 from fastapi import FastAPI
+
+from src.core.conf.logging_config import setup_logging
+
+setup_logging()
+
+logger = logging.getLogger(__name__)
 
 
 app = FastAPI(title="Blog API", description="The management of the Blog API")
@@ -13,7 +21,7 @@ def read_root():
 
     :return: dict: health status
     """
-
+    logger.info("User accessed the healthcheck page")
     return {"message": "Welcome to FastAPI project"}
 
 
