@@ -9,6 +9,7 @@ from src.core.database.models.enums import Role
 
 if TYPE_CHECKING:
     from src.core.database.models.profiles import Profile
+    from src.core.database.models.posts import Post
 
 
 class Author(Base):
@@ -26,6 +27,7 @@ class Author(Base):
     is_active: Mapped[bool] = mapped_column(default=True)
 
     profile: Mapped["Profile"] = relationship(lazy="selectin", back_populates="author")
+    posts: Mapped[list["Post"]] = relationship(lazy="selectin", back_populates="author")
 
     def __str__(self):
         return f"{self.__class__.__name__}(id={self.id}, username={self.username!r})"
