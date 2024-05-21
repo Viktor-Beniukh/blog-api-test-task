@@ -1,10 +1,14 @@
 from datetime import datetime
+from typing import TYPE_CHECKING
 
 from sqlalchemy import String, Enum, func
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database.db_settings.base import Base
 from src.core.database.models.enums import Role
+
+if TYPE_CHECKING:
+    from src.core.database.models.profiles import Profile
 
 
 class Author(Base):
@@ -20,6 +24,8 @@ class Author(Base):
         default=datetime.utcnow, server_default=func.now(), onupdate=func.now()
     )
     is_active: Mapped[bool] = mapped_column(default=True)
+
+    profile: Mapped["Profile"] = relationship(lazy="selectin", back_populates="author")
 
     def __str__(self):
         return f"{self.__class__.__name__}(id={self.id}, username={self.username!r})"
