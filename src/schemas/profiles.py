@@ -1,7 +1,7 @@
 from datetime import datetime
 
 from typing import Optional
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProfileBase(BaseModel):
@@ -14,7 +14,13 @@ class ProfileCreate(ProfileBase):
 
 
 class ProfilePartialUpdate(ProfileBase):
-    pass
+    phone_number: Optional[str] = Field(max_length=16, default="")
+    bio: Optional[str] = ""
+    facebook: Optional[str] = ""
+    twitter: Optional[str] = ""
+    instagram: Optional[str] = ""
+    telegram: Optional[str] = ""
+    youtube: Optional[str] = ""
 
 
 class ProfileResponse(ProfileBase):
