@@ -6,10 +6,12 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from src.core.database.db_settings.base import Base
 from src.core.database.models.mixins import AuthorRelationMixin
+from src.core.database.models.post_tag_association import post_tag_association_table
 from src.core.database.models.utils import slugify
 
 if TYPE_CHECKING:
     from src.core.database.models.categories import Category
+    from src.core.database.models.tags import Tag
 
 
 class Post(AuthorRelationMixin, Base):
@@ -28,6 +30,9 @@ class Post(AuthorRelationMixin, Base):
     )
 
     category: Mapped["Category"] = relationship(lazy="selectin", back_populates="posts")
+    tags: Mapped[list["Tag"]] = relationship(
+        secondary=post_tag_association_table, back_populates="posts"
+    )
 
     def __init__(self, *args, **kwargs):
         super(Post, self).__init__(*args, **kwargs)
