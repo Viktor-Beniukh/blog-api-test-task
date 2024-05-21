@@ -25,7 +25,7 @@ class Profile(AuthorRelationMixin, Base):
         default=datetime.utcnow, server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, server_default=func.now(), onupdate=func.now()
+        default=datetime.utcnow, server_default=func.now()
     )
 
     def full_name(self):

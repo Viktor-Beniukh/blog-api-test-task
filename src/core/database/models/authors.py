@@ -21,7 +21,7 @@ class Author(Base):
         default=datetime.utcnow, server_default=func.now()
     )
     updated_at: Mapped[datetime] = mapped_column(
-        default=datetime.utcnow, server_default=func.now(), onupdate=func.now()
+        default=datetime.utcnow, server_default=func.now()
     )
     is_active: Mapped[bool] = mapped_column(default=True)
 
