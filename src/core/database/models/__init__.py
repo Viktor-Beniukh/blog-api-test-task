@@ -1,5 +1,5 @@
 __all__ = (
-    "Base",
+    "Author",
 )
 
-from .base import Base
+from .authors import Author
