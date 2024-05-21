@@ -3,6 +3,8 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas.tags import TagResponse
+
 
 class PostBase(BaseModel):
     title: str
@@ -31,4 +33,17 @@ class PostResponse(PostBase):
     image: Optional[str]
     created_at: datetime
     updated_at: datetime
+    id: int
+
+
+class PostTagsResponse(PostBase):
+    model_config = ConfigDict(from_attributes=True)
+
+    slug: str
+    author_id: int
+    category_id: int
+    image: Optional[str]
+    created_at: datetime
+    updated_at: datetime
+    tags: Optional[list[TagResponse]] = []
     id: int
