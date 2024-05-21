@@ -15,7 +15,7 @@ class Auth:
     ALGORITHM = settings.algorithm
     ACCESS_TOKEN_EXPIRE_MINUTES = settings.access_token_expire_minutes
     REFRESH_TOKEN_EXPIRE_MINUTES = settings.refresh_token_expire_minutes
-    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/authors/login")
+    oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="Could not validate credentials",
