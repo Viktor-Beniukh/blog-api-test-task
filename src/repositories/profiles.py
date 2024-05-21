@@ -26,14 +26,8 @@ logger = logging.getLogger(__name__)
 
 async def create_profile(
     profile: ProfileCreate, author_id: int, session: AsyncSession
-) -> JSONResponse | models.Profile:
+) -> models.Profile:
     author = await repository_authors.get_author_by_id(author_id=author_id, session=session)
-
-    try:
-        validate_phone_number(phone_number=profile.phone_number)
-    except ValueError as ve:
-        logger.error(f"Validation error: {str(ve)}")
-        return JSONResponse(content={"error": str(ve)}, status_code=422)
 
     new_profile = models.Profile(**profile.model_dump(), author_id=author.id)
 
