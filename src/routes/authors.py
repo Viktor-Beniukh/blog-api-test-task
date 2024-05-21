@@ -83,8 +83,7 @@ async def change_password(
 
     if body.new_password != body.new_password_confirm:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="The new password and confirmed new password must be equal!"
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match!"
         )
 
     body.new_password = get_password_hash(password=body.new_password)
