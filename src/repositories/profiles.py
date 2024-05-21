@@ -1,6 +1,8 @@
 import os
 import logging
 
+from datetime import datetime
+
 from io import BytesIO
 from PIL import Image
 
@@ -67,6 +69,8 @@ async def partial_update_profile(
     for field, value in update_data.items():
         setattr(profile, field, value)
 
+    profile.updated_at = datetime.now()
+
     await session.commit()
     await session.refresh(profile)
 
@@ -92,6 +96,7 @@ async def upload_profile_image(
     image.save(filepath)
 
     profile.image = filename.lower()
+    profile.updated_at = datetime.now()
 
     await session.commit()
     await session.refresh(profile)

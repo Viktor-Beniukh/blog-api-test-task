@@ -1,4 +1,5 @@
 import logging
+from datetime import datetime
 
 from fastapi import HTTPException, status
 from fastapi.responses import JSONResponse
@@ -63,6 +64,7 @@ async def update_token(author: models.Author, refresh_token: str | None, session
         None
     """
     author.refresh_token = refresh_token
+    author.updated_at = datetime.now()
 
     await session.commit()
 
@@ -84,6 +86,7 @@ async def change_author_role(author_role: AuthorChangeRole, session: AsyncSessio
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
 
     author_to_update.role = author_role.role
+    author_to_update.updated_at = datetime.now()
 
     await session.commit()
 
@@ -94,5 +97,6 @@ async def change_password(email: str, password: str, session: AsyncSession) -> N
     author = await get_author_by_email(email=email, session=session)
 
     author.hashed_password = password
+    author.updated_at = datetime.now()
 
     await session.commit()
