@@ -23,7 +23,14 @@ disable_installed_extensions_check()
 app = FastAPI(title="Blog API", description="The management of the Blog API")
 
 
-@app.get("/")
+app.include_router(router=auth_router, prefix="/api")
+app.include_router(router=authors_router, prefix="/api")
+app.include_router(router=router_v1, prefix=settings.api_v1_prefix)
+
+add_pagination(app)
+
+
+@app.get("/", description="Main page")
 def read_root():
     """
     Healthcheck page definition
@@ -32,13 +39,6 @@ def read_root():
     """
     logger.info("User accessed the healthcheck page")
     return {"message": "Welcome to FastAPI project"}
-
-
-app.include_router(router=auth_router, prefix="/api")
-app.include_router(router=authors_router, prefix="/api")
-app.include_router(router=router_v1, prefix=settings.api_v1_prefix)
-
-add_pagination(app)
 
 
 if __name__ == "__main__":
