@@ -38,7 +38,7 @@ You need to create `.env` file and add there the variables with your according v
 Docker should be installed
 
 - Create docker image: `docker-compose build`
-- Run docker app: `docker-compose up`
+- Run docker app: `docker-compose up` or `docker-compose up -d` (to work in this terminal)
 
 
 
