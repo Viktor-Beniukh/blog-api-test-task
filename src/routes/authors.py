@@ -2,10 +2,12 @@ import logging
 
 from fastapi import APIRouter, status, HTTPException, Depends, UploadFile
 from fastapi.responses import JSONResponse
+from fastapi_pagination import Page, paginate
 
 from src.core.database.db_settings.db_helper import db_dependency
-from src.core.database.models import Author, Profile
+from src.core.database.models import Author, Profile, Post
 from src.core.database.models.enums import Role
+from src.schemas.posts import PostTagsResponse
 
 from src.schemas.profiles import ProfileResponse, ProfileCreate, ProfilePartialUpdate
 from src.schemas.authors import (
@@ -19,6 +21,7 @@ from src.services.validation import validate_password, validate_image
 
 from src.repositories import authors as repository_authors
 from src.repositories import profiles as repository_profiles
+from src.repositories import posts as repository_posts
 
 logger = logging.getLogger(__name__)
 
@@ -40,6 +43,55 @@ async def read_authors_me(current_author: Author = Depends(auth_service.get_curr
         Author: The current author object
     """
     return current_author
+
+
+@router.get("/me/my_posts", response_model=Page[PostTagsResponse])
+async def get_all_posts_for_current_author(
+    session: db_dependency,
+    current_author: Author = Depends(auth_service.get_current_author),
+) -> list[Post]:
+    """
+    The function returns a list of all posts for the current author in the database.
+
+        Args:
+            session: db_dependency: Access the database
+            current_author (Author): Get the current author data to obtain all posts
+
+    Returns:
+        A list of posts
+    """
+
+    posts = await repository_posts.get_all_posts_by_author_id(author_id=current_author.id, session=session)
+
+    if len(posts) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+    return paginate(posts)
+
+
+@router.get("/{author_id}/posts", response_model=Page[PostTagsResponse])
+async def get_all_posts_for_specific_author(author_id: int, session: db_dependency) -> list[Post]:
+    """
+    The function returns a list of all posts for the specific author in the database.
+
+        Args:
+            author_id: int: Get the id of the author to obtain all posts
+            session: db_dependency: Access the database
+
+    Returns:
+        A list of posts
+    """
+    author = await repository_authors.get_author_by_id(author_id=author_id, session=session)
+
+    if not author:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
+
+    posts = await repository_posts.get_all_posts_by_author_id(author_id=author.id, session=session)
+
+    if len(posts) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+    return paginate(posts)
 
 
 @router.post("/me/change_password", response_model=AuthorMessageResponse)

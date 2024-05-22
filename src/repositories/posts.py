@@ -110,6 +110,7 @@ async def get_all_posts(session: AsyncSession) -> list[models.Post]:
 async def get_all_posts_by_author_id(author_id: int, session: AsyncSession) -> list[models.Post]:
     stmt = (
         select(models.Post)
+        .options(joinedload(models.Post.author).joinedload(models.Author.profile))
         .options(subqueryload(models.Post.tags))
         .where(models.Post.author_id == author_id)
         .order_by(desc(models.Post.created_at))

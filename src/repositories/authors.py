@@ -7,6 +7,7 @@ from fastapi.responses import JSONResponse
 from sqlalchemy import select
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import joinedload
 
 from src.core.database import models
 from src.schemas.authors import AuthorCreate, AuthorChangeRole
@@ -37,6 +38,13 @@ async def create_author(author: AuthorCreate, session: AsyncSession) -> JSONResp
     return new_author
 
 
+async def get_all_authors(session: AsyncSession) -> list[models.Author]:
+    stmt = select(models.Author).options(joinedload(models.Author.profile))
+    result: Result = await session.execute(stmt)
+    authors = result.scalars().all()
+    return list(authors)
+
+
 async def get_author_by_email(email: str, session: AsyncSession) -> models.Author | None:
     stmt = select(models.Author).where(models.Author.email == email)
     result: Result = await session.execute(stmt)
@@ -45,7 +53,11 @@ async def get_author_by_email(email: str, session: AsyncSession) -> models.Autho
 
 
 async def get_author_by_id(author_id: int, session: AsyncSession) -> models.Author | None:
-    stmt = select(models.Author).where(models.Author.id == author_id)
+    stmt = (
+        select(models.Author)
+        .options(joinedload(models.Author.profile))
+        .where(models.Author.id == author_id)
+    )
     result: Result = await session.execute(stmt)
     author_data = result.scalar_one_or_none()
     return author_data
