@@ -6,13 +6,18 @@ from PIL import Image
 
 from fastapi import HTTPException, status, UploadFile
 
-from sqlalchemy import select, desc
+from sqlalchemy import select, desc, and_
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.orm import subqueryload
 
 from src.core.database import models
+from src.core.database.models.post_tag_association import post_tag_association_table
 from src.core.database.models.utils import slugify
+
 from src.schemas.posts import PostCreate, PostPartialUpdate
+
+from src.repositories import tags as repository_tags
 
 
 async def create_post(
@@ -32,8 +37,70 @@ async def create_post(
     return new_post
 
 
+async def add_tags_to_post(
+    post_id: int, author_id: int, tag_names: list[str], session: AsyncSession
+) -> None:
+    post = await get_post_by_id_and_by_author_id(post_id=post_id, author_id=author_id, session=session)
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+
+    for tag_name in tag_names:
+        tag_name = models.Tag.add_hashtag(tag_name)
+        tag = await repository_tags.get_tag_by_name(session=session, tag_name=tag_name)
+        if tag is None:
+            tag = await repository_tags.create_tag(session=session, tag_name=tag_name)
+
+        post_tag_association = post_tag_association_table.insert().values(
+            post_id=post.id, tag_id=tag.id
+        )
+        await session.execute(post_tag_association)
+
+    await session.commit()
+
+
+async def remove_tag_from_post(session: AsyncSession, tag_id: int, post_id: int, author_id: int) -> None:
+    post = await get_post_by_id_and_by_author_id(post_id=post_id, author_id=author_id, session=session)
+
+    if not post:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+    tag = await repository_tags.get_tag_by_id(session=session, tag_id=tag_id)
+
+    if not tag:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found")
+
+    association_record = await session.execute(
+        select(post_tag_association_table)
+        .filter(
+            post_tag_association_table.c.post_id == post.id,
+            post_tag_association_table.c.tag_id == tag.id
+        )
+    )
+    association_record = association_record.scalar_one_or_none()
+
+    if not association_record:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Association between post and tag not found"
+        )
+
+    post_tag_association = post_tag_association_table.delete().where(
+        and_(
+            post_tag_association_table.c.post_id == post.id,
+            post_tag_association_table.c.tag_id == tag.id
+        )
+    )
+
+    await session.execute(post_tag_association)
+    await session.commit()
+
+
 async def get_all_posts(session: AsyncSession) -> list[models.Post]:
-    stmt = select(models.Post).order_by(desc(models.Post.created_at))
+    stmt = (
+        select(models.Post)
+        .options(subqueryload(models.Post.tags))
+        .order_by(desc(models.Post.created_at))
+    )
     result: Result = await session.execute(stmt)
     posts = result.scalars().all()
     return list(posts)
@@ -42,6 +109,7 @@ async def get_all_posts(session: AsyncSession) -> list[models.Post]:
 async def get_all_posts_by_author_id(author_id: int, session: AsyncSession) -> list[models.Post]:
     stmt = (
         select(models.Post)
+        .options(subqueryload(models.Post.tags))
         .where(models.Post.author_id == author_id)
         .order_by(desc(models.Post.created_at))
     )
@@ -53,7 +121,22 @@ async def get_all_posts_by_author_id(author_id: int, session: AsyncSession) -> l
 async def get_specific_post_by_id(session: AsyncSession, post_id: int) -> models.Post | None:
     stmt = (
         select(models.Post)
+        .options(subqueryload(models.Post.tags))
         .where(models.Post.id == post_id)
+        .order_by(desc(models.Post.created_at))
+    )
+    result: Result = await session.execute(stmt)
+    post = result.scalar_one_or_none()
+    return post
+
+
+async def get_single_post_by_slug(session: AsyncSession, slug: str) -> models.Post | None:
+    stmt = (
+        select(models.Post)
+        .options(subqueryload(models.Post.tags))
+        .where(
+            models.Post.slug == slug,
+        )
         .order_by(desc(models.Post.created_at))
     )
     result: Result = await session.execute(stmt)
@@ -64,9 +147,13 @@ async def get_specific_post_by_id(session: AsyncSession, post_id: int) -> models
 async def get_post_by_id_and_by_author_id(
     session: AsyncSession, post_id: int, author_id: int
 ) -> models.Post | None:
-    stmt = select(models.Post).where(
-        models.Post.author_id == author_id,
-        models.Post.id == post_id
+    stmt = (
+        select(models.Post)
+        .options(subqueryload(models.Post.tags))
+        .where(
+            models.Post.author_id == author_id,
+            models.Post.id == post_id
+        )
     )
     result: Result = await session.execute(stmt)
     post = result.scalar_one_or_none()
