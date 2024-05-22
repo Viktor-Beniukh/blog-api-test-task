@@ -9,7 +9,7 @@ from fastapi import HTTPException, status, UploadFile
 from sqlalchemy import select, desc, and_
 from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy.orm import subqueryload
+from sqlalchemy.orm import subqueryload, joinedload
 
 from src.core.database import models
 from src.core.database.models.post_tag_association import post_tag_association_table
@@ -98,6 +98,7 @@ async def remove_tag_from_post(session: AsyncSession, tag_id: int, post_id: int,
 async def get_all_posts(session: AsyncSession) -> list[models.Post]:
     stmt = (
         select(models.Post)
+        .options(joinedload(models.Post.author).joinedload(models.Author.profile))
         .options(subqueryload(models.Post.tags))
         .order_by(desc(models.Post.created_at))
     )
@@ -133,10 +134,9 @@ async def get_specific_post_by_id(session: AsyncSession, post_id: int) -> models
 async def get_single_post_by_slug(session: AsyncSession, slug: str) -> models.Post | None:
     stmt = (
         select(models.Post)
+        .options(joinedload(models.Post.author).joinedload(models.Author.profile))
         .options(subqueryload(models.Post.tags))
-        .where(
-            models.Post.slug == slug,
-        )
+        .where(models.Post.slug == slug)
         .order_by(desc(models.Post.created_at))
     )
     result: Result = await session.execute(stmt)
