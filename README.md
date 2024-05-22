@@ -37,7 +37,8 @@ You need to create `.env` file and add there the variables with your according v
 
 Docker should be installed
 
-- Run docker app: `docker-compose up -d` (to run the database)
+- Create docker image: `docker-compose build`
+- Run docker app: `docker-compose up`
 
 
 
