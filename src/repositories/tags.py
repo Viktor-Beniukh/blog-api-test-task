@@ -5,6 +5,7 @@ from sqlalchemy.engine import Result
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from src.core.database import models
+from src.core.database.models.post_tag_association import post_tag_association_table
 from src.schemas.tags import TagUpdate
 
 
@@ -37,13 +38,9 @@ async def update_tag(
     session: AsyncSession, tag_id: int, tag_update: TagUpdate
 ) -> models.Tag:
     db_tag = await get_tag_by_id(tag_id=tag_id, session=session)
+    tag_name = models.Tag.add_hashtag(tag_update.name)
 
-    if not db_tag:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found"
-        )
-
-    db_tag.name = tag_update.name
+    db_tag.name = tag_name
 
     await session.commit()
     await session.refresh(db_tag)
@@ -59,5 +56,17 @@ async def delete_tag(session: AsyncSession, tag_id: int) -> None:
             status_code=status.HTTP_404_NOT_FOUND, detail="Tag not found"
         )
 
-    await session.delete(db_tag)
-    await session.commit()
+    association_record = await session.execute(
+        select(post_tag_association_table)
+        .filter(post_tag_association_table.c.tag_id == db_tag.id)
+    )
+    association_record = association_record.scalars().all()
+
+    if not association_record:
+        await session.delete(db_tag)
+        await session.commit()
+    else:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Tag cannot be deleted while there are any associations with posts!"
+        )
