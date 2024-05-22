@@ -119,6 +119,19 @@ async def get_all_posts_by_author_id(author_id: int, session: AsyncSession) -> l
     return list(posts)
 
 
+async def get_all_posts_by_category_id(category_id: int, session: AsyncSession) -> list[models.Post]:
+    stmt = (
+        select(models.Post)
+        .options(joinedload(models.Post.author).joinedload(models.Author.profile))
+        .options(subqueryload(models.Post.tags))
+        .where(models.Post.category_id == category_id)
+        .order_by(desc(models.Post.created_at))
+    )
+    result: Result = await session.execute(stmt)
+    posts = result.scalars().all()
+    return list(posts)
+
+
 async def get_specific_post_by_id(session: AsyncSession, post_id: int) -> models.Post | None:
     stmt = (
         select(models.Post)

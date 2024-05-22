@@ -1,17 +1,19 @@
 from fastapi import APIRouter, status, HTTPException, Depends
+from fastapi_pagination import Page, paginate
 
 from src.core.database import models
 from src.core.database.db_settings.db_helper import db_dependency
 from src.core.database.models.enums import Role
 
 from src.repositories import categories as repository_categories
+from src.repositories import posts as repository_posts
 
 from src.schemas.categories import CategoryResponse, CategoryChange
+from src.schemas.posts import PostTagsResponse
 
 from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["Categories"])
-
 
 allowed_operation_admin_moderator = RoleAccess([Role["admin"], Role["moderator"]])
 
@@ -19,7 +21,7 @@ allowed_operation_admin_moderator = RoleAccess([Role["admin"], Role["moderator"]
 @router.post("/",
              response_model=CategoryResponse,
              status_code=status.HTTP_201_CREATED,
-             dependencies=[Depends(allowed_operation_admin_moderator)],)
+             dependencies=[Depends(allowed_operation_admin_moderator)], )
 async def create_category(category_data: CategoryChange, session: db_dependency) -> models.Category:
     """
     The create_category function creates a new category in the database.
@@ -43,7 +45,9 @@ async def create_category(category_data: CategoryChange, session: db_dependency)
     return await repository_categories.create_category(category=category_data, session=session)
 
 
-@router.get("/", response_model=list[CategoryResponse])
+@router.get("/",
+            response_model=list[CategoryResponse],
+            dependencies=[Depends(allowed_operation_admin_moderator)])
 async def get_all_categories(session: db_dependency) -> list[models.Category]:
     """
     The function returns a list of all categories in the database.
@@ -63,34 +67,43 @@ async def get_all_categories(session: db_dependency) -> list[models.Category]:
     return categories
 
 
-@router.get("/{category_id}", response_model=CategoryResponse)
-async def get_single_category(category_id: int, session: db_dependency) -> models.Category:
+@router.get("/{category_id}/{category_slug}/posts", response_model=Page[PostTagsResponse])
+async def get_single_category_with_posts(
+    category_id: int, category_slug: str, session: db_dependency
+) -> list[models.Post]:
     """
-    The function returns a single category in the database.
+    The function returns list of posts fot the single category in the database.
 
         Args:
             category_id: int: Get the id of the category to be obtained
+            category_slug: str: Get the slug of the category to be obtained
             session: db_dependency: Access the database
 
     Returns:
         The category object
     """
 
-    category = await repository_categories.get_category_by_id(category_id=category_id, session=session)
+    category = await repository_categories.get_category_by_id_and_slug(
+        category_id=category_id, category_slug=category_slug, session=session)
 
     if not category:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
-    return category
+    posts = await repository_posts.get_all_posts_by_category_id(category_id=category.id, session=session)
+
+    if len(posts) == 0:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+    return paginate(posts)
 
 
 @router.put("/{category_id}/update",
             response_model=CategoryResponse,
             dependencies=[Depends(allowed_operation_admin_moderator)])
 async def update_category(
-    updated_category: CategoryChange,
-    category_id: int,
-    session: db_dependency
+        updated_category: CategoryChange,
+        category_id: int,
+        session: db_dependency
 ) -> models.Category:
     """
     The update_category function is used to update the category.
