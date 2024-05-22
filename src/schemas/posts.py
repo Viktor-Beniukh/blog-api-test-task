@@ -3,6 +3,7 @@ from typing import Optional
 
 from pydantic import BaseModel, ConfigDict
 
+from src.schemas.authors import AuthorResponse
 from src.schemas.tags import TagResponse
 
 
@@ -29,6 +30,7 @@ class PostResponse(PostBase):
 
     slug: str
     author_id: int
+    author: Optional[AuthorResponse] = {}
     category_id: int
     image: Optional[str]
     created_at: datetime
@@ -41,6 +43,7 @@ class PostTagsResponse(PostBase):
 
     slug: str
     author_id: int
+    author: Optional[AuthorResponse] = {}
     category_id: int
     image: Optional[str]
     created_at: datetime
