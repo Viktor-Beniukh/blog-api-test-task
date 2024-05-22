@@ -195,6 +195,17 @@ async def upload_profile_image(
     file: UploadFile = Depends(validate_image),
     current_author: Author = Depends(auth_service.get_current_author),
 ) -> dict[str, str]:
+    """
+    The upload_profile_image function uploads profile image.
+
+        Args:
+            file: UploadFile: upload image
+            session: db_dependency: Access the database
+            current_author (Author): the current author
+
+    Returns:
+        A message about successful uploading profile image
+    """
     existing_profile = await repository_profiles.get_profile_by_author_id(
         author_id=current_author.id, session=session
     )
