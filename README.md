@@ -17,10 +17,12 @@ python3 -m venv venv
 source venv/bin/activate
 pip install poetry
 poetry install
-python main.py 
+docker-compose -f docker-compose.local.yml up -d
+alembic upgrade head
+uvicorn main:app --host localhost --port 8000 --reload 
 ```
 
-You need to create `.env` file and add there the variables with your according values:
+You need to create `.env` (for running project into docker) and (or) `.env.local` (for local work) file and add there the variables with your according values:
 - `POSTGRES_DB`: this is databases name;
 - `POSTGRES_USER`: this is username for databases;
 - `POSTGRES_PASSWORD`: this is username password for databases;
