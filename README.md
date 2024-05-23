@@ -30,7 +30,7 @@ You need to create `.env` (for running project into docker) and (or) `.env.local
 - `POSTGRES_PORT`: this is port for databases;
 - `DATABASE_URL=postgresql+driver://user:pass@host:port/dbname`: it's a format of database url
   (for local work - `host` - `localhost` or `127.0.0.1`, into Docker - image name of database)
-- `SECRET_KEY` and `JWT_SECRET_KEY`: this is Django Secret Key - by default is set automatically when you create a Django project.
+- `SECRET_KEY` and `JWT_SECRET_KEY`: this is Secret Key - by default is set automatically when you create a Django project.
                 You can generate a new key, if you want, by following the link: `https://djecrety.ir`;
 - `ALGORITHM`: needed to create tokens
 
