@@ -14,7 +14,7 @@ API service for management of a blog written on FastAPI.
 git clone https://github.com/Viktor-Beniukh/blog-api-test-task.git
 cd blog-api-test-task
 python3 -m venv venv
-source venv/bin/activate
+source venv/bin/activate (for Linux or macOS) or venv\Scripts\activate (for Windows)
 pip install poetry
 poetry install
 docker-compose -f docker-compose.local.yml up -d
