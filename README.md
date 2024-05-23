@@ -107,4 +107,5 @@ Docker should be installed
 
 
 ### Checking the endpoints functionality
-- You can see detailed APIs at swagger page: `http://127.0.0.1:8000/docs/`.
+- You can see detailed APIs at swagger page: `http://127.0.0.1:8000/docs/` (for local work) 
+  or `http://127.0.0.1:8080/docs/` (if the project is run into docker).
