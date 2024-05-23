@@ -42,7 +42,7 @@ async def add_tags_to_post(
 ) -> None:
     post = await get_post_by_id_and_by_author_id(post_id=post_id, author_id=author_id, session=session)
     if not post:
-        raise HTTPException(status_code=404, detail="Post not found")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
     for tag_name in tag_names:
         tag_name = models.Tag.add_hashtag(tag_name)
