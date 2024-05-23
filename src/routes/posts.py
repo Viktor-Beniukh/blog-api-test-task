@@ -1,6 +1,9 @@
+import pickle
+
 from fastapi import APIRouter, status, Depends, HTTPException, UploadFile
 from fastapi_pagination import Page, paginate
 
+from src.core.conf.caching import get_redis
 from src.core.database import models
 from src.core.database.db_settings.db_helper import db_dependency
 
@@ -16,6 +19,7 @@ from src.repositories import categories as repository_categories
 from src.repositories import posts as repository_posts
 
 from src.services.auth import auth_service
+from src.services.cache_in_redis import delete_cache_in_redis
 from src.services.validation import validate_image
 
 router = APIRouter(tags=["Posts"])
@@ -54,6 +58,8 @@ async def create_post(
         category_id=category.id
     )
 
+    await delete_cache_in_redis()
+
     return new_post
 
 
@@ -68,11 +74,28 @@ async def get_all_posts(session: db_dependency) -> list[models.Post]:
     Returns:
         A list of posts
     """
+    redis_client = get_redis()
 
-    posts = await repository_posts.get_all_posts(session=session)
+    key = f"posts"
 
-    if len(posts) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+    cached_posts = None
+
+    if redis_client:
+        cached_posts = redis_client.get(key)
+
+    if not cached_posts:
+
+        posts = await repository_posts.get_all_posts(session=session)
+
+        if len(posts) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(posts))
+            redis_client.expire(key, 1800)
+
+    else:
+        posts = pickle.loads(cached_posts)
 
     return paginate(posts)
 
@@ -89,10 +112,27 @@ async def get_single_post(session: db_dependency, post_slug: str) -> models.Post
     Returns:
         A single post
     """
-    post = await repository_posts.get_single_post_by_slug(session=session, slug=post_slug)
+    redis_client = get_redis()
 
-    if not post:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+    key = f"post_slug-{post_slug}"
+
+    cached_single_post = None
+
+    if redis_client:
+        cached_single_post = redis_client.get(key)
+
+    if not cached_single_post:
+        post = await repository_posts.get_single_post_by_slug(session=session, slug=post_slug)
+
+        if not post:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(post))
+            redis_client.expire(key, 1800)
+
+    else:
+        post = pickle.loads(cached_single_post)
 
     return post
 
@@ -126,6 +166,8 @@ async def update_post(
         session=session, post_id=post.id, post_update=post_update, author_id=current_author.id
     )
 
+    await delete_cache_in_redis()
+
     return updated_post
 
 
@@ -153,6 +195,8 @@ async def delete_post(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Post not found")
 
     await repository_posts.delete_post(session=session, post_id=post_id, author_id=current_author.id)
+
+    await delete_cache_in_redis()
 
 
 @router.post("/{post_id}/upload-image", response_model=PostMessageResponse)
@@ -185,6 +229,8 @@ async def upload_post_image(
 
     await repository_posts.upload_post_image(file=file, post=post, session=session)
 
+    await delete_cache_in_redis()
+
     return {"message": "Post Image uploaded successfully"}
 
 
@@ -212,6 +258,8 @@ async def add_tags_to_post(
         session=session, post_id=post_id, author_id=current_author.id, tag_names=tag_names
     )
 
+    await delete_cache_in_redis()
+
     return {"message": "Tags added to post successfully!"}
 
 
@@ -238,3 +286,5 @@ async def remove_tag_data_from_post(
     await repository_posts.remove_tag_from_post(
         post_id=post_id, tag_id=tag_id, author_id=current_author.id, session=session
     )
+
+    await delete_cache_in_redis()

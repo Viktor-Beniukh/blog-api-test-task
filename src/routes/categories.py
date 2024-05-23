@@ -1,6 +1,9 @@
+import pickle
+
 from fastapi import APIRouter, status, HTTPException, Depends
 from fastapi_pagination import Page, paginate
 
+from src.core.conf.caching import get_redis
 from src.core.database import models
 from src.core.database.db_settings.db_helper import db_dependency
 from src.core.database.models.enums import Role
@@ -11,6 +14,7 @@ from src.repositories import posts as repository_posts
 from src.schemas.categories import CategoryResponse, CategoryChange
 from src.schemas.posts import PostTagsResponse
 
+from src.services.cache_in_redis import delete_cache_in_redis
 from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["Categories"])
@@ -42,6 +46,8 @@ async def create_category(category_data: CategoryChange, session: db_dependency)
             status_code=status.HTTP_409_CONFLICT, detail="The name of the category already exists"
         )
 
+    await delete_cache_in_redis()
+
     return await repository_categories.create_category(category=category_data, session=session)
 
 
@@ -59,10 +65,28 @@ async def get_all_categories(session: db_dependency) -> list[models.Category]:
         A list of categories
     """
 
-    categories = await repository_categories.get_all_categories(session=session)
+    redis_client = get_redis()
 
-    if len(categories) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categories not found")
+    key = f"categories"
+
+    cached_categories = None
+
+    if redis_client:
+        cached_categories = redis_client.get(key)
+
+    if not cached_categories:
+
+        categories = await repository_categories.get_all_categories(session=session)
+
+        if len(categories) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Categories not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(categories))
+            redis_client.expire(key, 1800)
+
+    else:
+        categories = pickle.loads(cached_categories)
 
     return categories
 
@@ -82,17 +106,34 @@ async def get_single_category_with_posts(
     Returns:
         The category object
     """
+    redis_client = get_redis()
 
-    category = await repository_categories.get_category_by_id_and_slug(
-        category_id=category_id, category_slug=category_slug, session=session)
+    key = f"category_id-{category_id}-category_slug-{category_slug}_posts"
 
-    if not category:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+    cached_category_posts = None
 
-    posts = await repository_posts.get_all_posts_by_category_id(category_id=category.id, session=session)
+    if redis_client:
+        cached_category_posts = redis_client.get(key)
 
-    if len(posts) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+    if not cached_category_posts:
+
+        category = await repository_categories.get_category_by_id_and_slug(
+            category_id=category_id, category_slug=category_slug, session=session)
+
+        if not category:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
+
+        posts = await repository_posts.get_all_posts_by_category_id(category_id=category.id, session=session)
+
+        if len(posts) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(posts))
+            redis_client.expire(key, 1800)
+
+    else:
+        posts = pickle.loads(cached_category_posts)
 
     return paginate(posts)
 
@@ -126,6 +167,8 @@ async def update_category(
         updated_category=updated_category, category_id=category_id, session=session
     )
 
+    await delete_cache_in_redis()
+
     return updated_category
 
 
@@ -150,3 +193,5 @@ async def delete_category(category_id: int, session: db_dependency) -> None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Category not found")
 
     await repository_categories.delete_category(category_id=category_id, session=session)
+
+    await delete_cache_in_redis()

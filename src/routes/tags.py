@@ -6,6 +6,8 @@ from src.core.database.models.enums import Role
 
 from src.schemas.tags import TagResponse, TagUpdate
 from src.repositories import tags as repository_tags
+
+from src.services.cache_in_redis import delete_cache_in_redis
 from src.services.roles import RoleAccess
 
 router = APIRouter(tags=["Tags"])
@@ -36,6 +38,8 @@ async def update_tag(session: db_dependency, tag_update: TagUpdate, tag_id: int)
 
     updated_tag = await repository_tags.update_tag(session=session, tag_id=tag.id, tag_update=tag_update)
 
+    await delete_cache_in_redis()
+
     return updated_tag
 
 
@@ -55,3 +59,5 @@ async def delete_tag(session: db_dependency, tag_id: int) -> None:
         None
     """
     await repository_tags.delete_tag(session=session, tag_id=tag_id)
+
+    await delete_cache_in_redis()

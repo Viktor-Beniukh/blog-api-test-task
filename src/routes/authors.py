@@ -1,20 +1,23 @@
 import logging
+import pickle
 
 from fastapi import APIRouter, status, HTTPException, Depends, UploadFile
 from fastapi.responses import JSONResponse
 from fastapi_pagination import Page, paginate
 
+from src.core.conf.caching import get_redis
 from src.core.database.db_settings.db_helper import db_dependency
 from src.core.database.models import Author, Profile, Post
 from src.core.database.models.enums import Role
-from src.schemas.posts import PostTagsResponse
 
+from src.schemas.posts import PostTagsResponse
 from src.schemas.profiles import ProfileResponse, ProfileCreate, ProfilePartialUpdate
 from src.schemas.authors import (
     AuthorResponse, AuthorMessageResponse, PasswordChangeModel, AuthorChangeRole,
 )
 
 from src.services.auth import auth_service
+from src.services.cache_in_redis import delete_cache_in_redis
 from src.services.roles import RoleAccess
 from src.services.security import verify_password, get_password_hash
 from src.services.validation import validate_password, validate_image
@@ -60,11 +63,30 @@ async def get_all_posts_for_current_author(
     Returns:
         A list of posts
     """
+    redis_client = get_redis()
 
-    posts = await repository_posts.get_all_posts_by_author_id(author_id=current_author.id, session=session)
+    key = f"current_author_id-{current_author.id}_posts"
 
-    if len(posts) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+    cached_current_author_posts = None
+
+    if redis_client:
+        cached_current_author_posts = redis_client.get(key)
+
+    if not cached_current_author_posts:
+
+        posts = await repository_posts.get_all_posts_by_author_id(
+            author_id=current_author.id, session=session
+        )
+
+        if len(posts) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(posts))
+            redis_client.expire(key, 1800)
+
+    else:
+        posts = pickle.loads(cached_current_author_posts)
 
     return paginate(posts)
 
@@ -81,15 +103,32 @@ async def get_all_posts_for_specific_author(author_id: int, session: db_dependen
     Returns:
         A list of posts
     """
-    author = await repository_authors.get_author_by_id(author_id=author_id, session=session)
+    redis_client = get_redis()
 
-    if not author:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
+    key = f"author_id-{author_id}_posts"
 
-    posts = await repository_posts.get_all_posts_by_author_id(author_id=author.id, session=session)
+    cached_author_posts = None
 
-    if len(posts) == 0:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+    if redis_client:
+        cached_author_posts = redis_client.get(key)
+
+    if not cached_author_posts:
+        author = await repository_authors.get_author_by_id(author_id=author_id, session=session)
+
+        if not author:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Author not found")
+
+        posts = await repository_posts.get_all_posts_by_author_id(author_id=author.id, session=session)
+
+        if len(posts) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Posts not found")
+
+        if redis_client:
+            redis_client.set(key, pickle.dumps(posts))
+            redis_client.expire(key, 1800)
+
+    else:
+        posts = pickle.loads(cached_author_posts)
 
     return paginate(posts)
 
@@ -144,6 +183,8 @@ async def change_password(
         email=author.email, password=body.new_password, session=session
     )
 
+    await delete_cache_in_redis()
+
     return {"message": "Your password changed successfully"}
 
 
@@ -177,6 +218,8 @@ async def create_author_profile(
     new_profile = await repository_profiles.create_profile(
         profile=author_profile, author_id=current_author.id, session=session
     )
+
+    await delete_cache_in_redis()
 
     return new_profile
 
@@ -212,6 +255,8 @@ async def partial_update_author_profile(
         updated_profile=author_profile, author_id=current_author.id, session=session
     )
 
+    await delete_cache_in_redis()
+
     return partial_updated_user_profile
 
 
@@ -239,6 +284,8 @@ async def delete_author_profile(
         )
 
     await repository_profiles.delete_profile(author_id=current_author.id, session=session)
+
+    await delete_cache_in_redis()
 
 
 @router.post("/me/profile/upload-image", response_model=AuthorMessageResponse)
@@ -271,6 +318,8 @@ async def upload_profile_image(
         file=file, profile=existing_profile, session=session
     )
 
+    await delete_cache_in_redis()
+
     return {"message": "Profile image uploaded successfully"}
 
 
@@ -288,5 +337,7 @@ async def change_role(author_role: AuthorChangeRole, session: db_dependency) -> 
     Returns:
         Author: object after the change operation
     """
+
+    await delete_cache_in_redis()
 
     return await repository_authors.change_author_role(author_role=author_role, session=session)

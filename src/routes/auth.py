@@ -3,6 +3,7 @@ import logging
 from fastapi import APIRouter, status, HTTPException, Depends, Response, Request
 from fastapi.security import OAuth2PasswordRequestForm
 
+from src.core.conf.caching import get_redis
 from src.core.database import models
 from src.core.database.db_settings.db_helper import db_dependency
 
@@ -64,6 +65,8 @@ async def login_for_tokens(
     Returns:
         dict: JSON access_token - refresh_token - token_type - author object
     """
+    with get_redis() as redis_cl:
+        redis_cl.delete(f"author:{form_data.username}")
 
     author = await repository_authors.get_author_by_email(email=form_data.username, session=session)
 
@@ -130,5 +133,8 @@ async def refresh_token(request: Request, response: Response, session: db_depend
     response.set_cookie(
         key="refresh_token", value=refresh_token_, httponly=True, secure=True, samesite="none"
     )
+
+    with get_redis() as redis_cl:
+        redis_cl.delete(f"author:{email}")
 
     return TokenModel(access_token=access_token, token_type="bearer", author=author)
