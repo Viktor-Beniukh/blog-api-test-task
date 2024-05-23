@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     algorithm: str
     access_token_expire_minutes: int = 30
     refresh_token_expire_minutes: int = 60 * 24 * 7
+    redis_host: str
+    redis_port: str
 
     model_config = SettingsConfigDict(env_file=get_app_env(), extra="allow")
 
