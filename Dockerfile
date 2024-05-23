@@ -16,6 +16,7 @@ FROM python:3.11-slim-buster
 
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV APP_ENV prod
 
 
 RUN apt-get update && apt-get install -y netcat
