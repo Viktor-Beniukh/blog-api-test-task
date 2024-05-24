@@ -10,5 +10,8 @@ set -e
 # Running migrations
 alembic upgrade head
 
+# Running your script to add data to the database
+python /code/add_data_to_db.py
+
 # Running Uvicorn
 exec uvicorn main:app --host 0.0.0.0 --port 8000

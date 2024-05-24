@@ -54,6 +54,9 @@ RUN chmod +x /entrypoint.sh
 COPY ./wait-for-it.sh /wait-for-it.sh
 RUN chmod +x /wait-for-it.sh
 
+COPY ./add_data_to_db.py /code/add_data_to_db.py
+RUN chmod +x /code/add_data_to_db.py
+
 USER fastapi-user
 
 ENTRYPOINT ["/entrypoint.sh"]

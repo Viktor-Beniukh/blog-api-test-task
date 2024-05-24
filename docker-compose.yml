@@ -25,7 +25,9 @@ services:
     depends_on:
       - postgres
       - redis
-    command: ["./wait-for-it.sh", "postgres:5432", "--", "alembic", "upgrade", "head"]
+    command: >
+      sh -c "./wait-for-it.sh postgres:5432 -- alembic upgrade head && python /code/add_data_to_db.py"
+
     networks:
       - blog-network
 
