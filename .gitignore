@@ -340,3 +340,5 @@ $RECYCLE.BIN/
 /logs/
 /media/
 /.env.local
+/db_url.py
+/data.json
