@@ -20,6 +20,7 @@ pillow = "^10.3.0"
 alembic = "^1.13.1"
 asyncpg = "^0.29.0"
 redis = "^5.0.4"
+python-dotenv = "^1.0.1"
 
 [tool.poetry.group.dev.dependencies]
 black = "^24.4.2"
