@@ -2,6 +2,6 @@ import json
 from data_module import data_json
 
 
-def create_json_data():
+def create_json_data() -> None:
     with open("data.json", "w") as json_file:
         json.dump(data_json, json_file, indent=4)
