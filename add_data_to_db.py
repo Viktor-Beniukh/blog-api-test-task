@@ -47,7 +47,7 @@ async def insert_data_into_tables(data: dict, session: AsyncSession) -> None:
                 for author in items:
                     author["hashed_password"] = get_password_hash(author["hashed_password"])
 
-            table = await get_table_metadata(connection, table_name)
+            table = await get_table_metadata(connection=connection, table_name=table_name)
             await session.execute(table.insert(), items)
         await session.commit()
         print("Data inserted successfully.")
@@ -55,10 +55,10 @@ async def insert_data_into_tables(data: dict, session: AsyncSession) -> None:
 
 
 async def main() -> None:
-    data_json = await load_data_from_json(json_file_path)
+    data_json = await load_data_from_json(file_path=json_file_path)
     if data_json:
         async with async_session() as session:
-            await insert_data_into_tables(data_json, session)
+            await insert_data_into_tables(data=data_json, session=session)
     else:
         print("Failed to load data from JSON.")
         logger.info("Failed to load data from JSON.")

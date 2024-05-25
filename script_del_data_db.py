@@ -39,13 +39,13 @@ async def clear_tables(table_names: list, session: AsyncSession) -> None:
 
 async def main() -> None:
     model_classes = [Author]
-    table_names_to_clear = await get_table_names(model_classes)
+    table_names_to_clear = await get_table_names(models=model_classes)
 
     session_gen = get_async_session()
     session = await session_gen.__anext__()
 
     async with session:
-        await clear_tables(table_names_to_clear, session)
+        await clear_tables(table_names=table_names_to_clear, session=session)
 
 
 if __name__ == "__main__":
