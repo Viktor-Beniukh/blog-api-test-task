@@ -3,6 +3,8 @@ import json
 import asyncio
 import logging
 
+from fastapi import Path
+
 from sqlalchemy.ext.asyncio import AsyncSession, AsyncConnection
 from sqlalchemy import MetaData, Table, Inspector
 
@@ -18,7 +20,7 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 json_file_path = os.path.join(current_dir, "data.json")
 
 
-async def load_data_from_json(file_path):
+async def load_data_from_json(file_path: Path) -> dict | None:
     try:
         with open(file_path, "r") as file:
             data = json.load(file)
@@ -29,7 +31,7 @@ async def load_data_from_json(file_path):
         return None
 
 
-async def get_table_metadata(connection: AsyncConnection, table_name: str):
+async def get_table_metadata(connection: AsyncConnection, table_name: str) -> AsyncConnection:
     def sync_inspect(conn):
         inspector = Inspector.from_engine(conn)
         return Table(table_name, MetaData(), autoload_with=conn)
@@ -37,7 +39,7 @@ async def get_table_metadata(connection: AsyncConnection, table_name: str):
     return await connection.run_sync(sync_inspect)
 
 
-async def insert_data_into_tables(data, session: AsyncSession):
+async def insert_data_into_tables(data: dict, session: AsyncSession) -> None:
     async with session.begin():
         connection = await session.connection()
         for table_name, items in data.items():
@@ -52,7 +54,7 @@ async def insert_data_into_tables(data, session: AsyncSession):
         logger.info("Data inserted successfully.")
 
 
-async def main():
+async def main() -> None:
     data_json = await load_data_from_json(json_file_path)
     if data_json:
         async with async_session() as session:
