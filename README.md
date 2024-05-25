@@ -22,7 +22,8 @@ alembic upgrade head
 uvicorn main:app --host localhost --port 8000 --reload 
 ```
 
-You need to create `.env` (for running project into docker) and (or) `.env.local` (for local work) file and add there the variables with your according values:
+You need to create `.env` (for running project into docker) and (or) `.env.local` (for local work) file 
+and add there the variables with your according values (e.g. `.env.sample`):
 - `POSTGRES_DB`: this is databases name;
 - `POSTGRES_USER`: this is username for databases;
 - `POSTGRES_PASSWORD`: this is username password for databases;
@@ -33,6 +34,30 @@ You need to create `.env` (for running project into docker) and (or) `.env.local
 - `SECRET_KEY` and `JWT_SECRET_KEY`: this is Secret Key - by default is set automatically when you create a Django project.
                 You can generate a new key, if you want, by following the link: `https://djecrety.ir`;
 - `ALGORITHM`: needed to create tokens
+- `REDIS_HOST`: this is host name for redis (for local work - `localhost`, into Docker - image name of redis);
+- `REDIS_PORT`: this is port for redis;
+
+
+It is possible to fill the database with fake user data for testing (these data are in a file named `data_module.py`). 
+To do it, you must create `db_url.py` file and add there the variables with your according values (e.g. `db_url.sample.py`):
+- `db_url`: this is database url to run the project locally 
+  (corresponds to the value of the variable with the database name set in `.env.local`);
+- `db_url_docker`: this is database url to run the project into docker;
+  (corresponds to the value of the variable with the database name set in `.env`);
+
+To run a script for local operation, you need to run a command `python add_data_to_db.py` 
+(in docker it realised automatically when run docker compose - `docker-compose up` or `docker-compose up -d`)
+
+There is also the ability to clean the database. For it, you need to run a script `script_del_data_db.py`: 
+- run a command `python script_del_data_db.py` - for local work;
+- run a command `docker exec -it <container_name> python /code/script_del_data_db.py` - for docker.
+  (`container_name` is the container name of the web application)
+
+In order for you to know the container name, you need to run command `docker ps`.
+
+These operations realised only for Author model. If you want to do it for other models, 
+you need to add the data of other models to a file called `data_module.py` 
+and add table names to a script named `script_del_data_db.py`
 
 
 
