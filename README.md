@@ -39,20 +39,21 @@ and add there the variables with your according values (e.g. `.env.sample`):
 
 
 It is possible to fill the database with fake user data for testing (these data are in a file named `data_module.py`). 
-To do it, you must create `db_url.py` file and add there the variables with your according values (e.g. `db_url.sample.py`):
+To do it, you need to create `db_url.py` file and add there the variables with your according values (e.g. `db_url.sample.py`):
 - `db_url`: this is database url to run the project locally 
   (corresponds to the value of the variable with the database name set in `.env.local`);
 - `db_url_docker`: this is database url to run the project into docker;
   (corresponds to the value of the variable with the database name set in `.env`);
 
-To run a script for local operation, you need to run a command `python add_data_to_db.py` 
-(in docker it realised automatically when run docker compose - `docker-compose up` or `docker-compose up -d`)
+To run a script for local operation, you need to run a command `python add_data_to_db.py`,
+into docker - after that how you run docker compose - `docker-compose up` or `docker-compose up -d`,
+you need to run a command `docker exec -it <container_name> python /code/add_data_to_db.py`.
 
 There is also the ability to clean the database. For it, you need to run a script `script_del_data_db.py`: 
 - run a command `python script_del_data_db.py` - for local work;
 - run a command `docker exec -it <container_name> python /code/script_del_data_db.py` - for docker.
-  (`container_name` is the container name of the web application)
-
+  
+`container_name` is the container name of the web application. 
 In order for you to know the container name, you need to run command `docker ps`.
 
 These operations realised only for Author model. If you want to do it for other models, 
